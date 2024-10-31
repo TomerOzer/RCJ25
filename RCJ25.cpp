@@ -25,7 +25,7 @@ RCJ25::RCJ25()
 {}
 
 void RCJ25::begin() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     pwmDriver.begin();
     pwmDriver.setPWMFreq(1000);  // Set frequency for PCA9685
     calibrateMPU();              
@@ -65,6 +65,34 @@ float RCJ25::pidcalc(float sp, float pv, float kp, float ki, float kd) {
     previousTime = currentTime;
 
     return output;
+}
+void RCJ25::turn(int sp, int speed) {
+    int pv = getYaw();
+    
+    while (pv != sp) { 
+        int turnOutput = pidcalc(sp, pv, 1.0, 0.01, 0.2);
+
+        int RightSpeed = speed + turnOutput;
+        int leftSpeed = speed - turnOutput;
+
+        motor1.setSpeed(RightSpeed);
+        motor2.setSpeed(leftSpeed);
+        motor3.setSpeed(RightSpeed);
+        motor4.setSpeed(leftSpeed);
+        
+        WriteYaw();
+        
+        Serial.print("Speed Right: ");
+        Serial.print(RightSpeed);
+        Serial.print(", Speed Left: ");
+        Serial.println(leftSpeed);
+
+        pv = getYaw();  
+    }
+
+    stopMotors();
+    Serial.print("Robot in:");
+    Serial.println(sp);
 }
 
 int RCJ25::receiveAngleFromOpenMV() {
@@ -144,7 +172,39 @@ void RCJ25::calibrateMPU() {
     Serial.println("MPU calibration complete.");
 }
 
-float RCJ25::getYaw() {
+int RCJ25::getYaw() {
     mpu.update();
     return mpu.getAngleZ();
+}
+
+
+int RCJ25::getPitch() {
+    mpu.update();
+    return mpu.getAngleX();
+}
+
+int RCJ25::getRoll() {
+    mpu.update();
+    return mpu.getAngleY();
+}
+
+void RCJ25::WriteYaw() {
+  int yaw = getYaw();
+  Serial.print("| YAW =");
+  Serial.print(yaw);
+  Serial.println(" |");
+}
+
+void RCJ25::WritePitch() {
+  int Pitch = getPitch();
+  Serial.print("| Pitch =");
+  Serial.print(Pitch);
+  Serial.println(" |");
+}
+
+void RCJ25::WriteRoll() {
+  int Roll = getRoll();
+  Serial.print("| Roll =");
+  Serial.print(Roll);
+  Serial.println(" |");
 }

@@ -18,11 +18,17 @@ public:
     void write(String txt);
     void stopMotors();
     void calibrateMPU();
-    float getYaw();
+    int getYaw();
+    int getRoll();
+    int getPitch();
+    void WriteYaw();
+    void WriteRoll();
+    void WritePitch();
     void setMotor1Speed(int speed);
     void setMotor2Speed(int speed);
     void setMotor3Speed(int speed);
     void setMotor4Speed(int speed);
+    
 
 
 private:
