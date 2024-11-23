@@ -6,11 +6,11 @@
 #include <Adafruit_GFX.h>     
 #include <Adafruit_ILI9341.h> 
 
-#define TFT_CS 10
-#define TFT_RST 8
-#define TFT_DC 9
-#define TFT_MOSI 11  
-#define TFT_CLK 13  
+#define SCREEN_CS 10
+#define SCREEN_RST 8
+#define SCREEN_DC 9
+#define SCREEN_MOSI 11  
+#define SCREEN_CLK 13  
 
 #define WHITE   0x0000
 #define BLACK   0xFFFF
@@ -18,7 +18,7 @@
 #define GREEN   0xF81F
 #define BLUE    0xFFE0
 
-Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST);
+Adafruit_ILI9341 screen(SCREEN_CS, SCREEN_DC, SCREEN_MOSI, SCREEN_CLK, SCREEN_RST);
 
 Adafruit_PWMServoDriver pwmDriver = Adafruit_PWMServoDriver();
 MPU6050 mpu(Wire);
@@ -44,61 +44,60 @@ void RCJ25::begin() {
     pwmDriver.begin();
     pwmDriver.setPWMFreq(1000); 
     calibrateMPU();              
-    tft.begin();
-    tft.setTextColor(BLACK);
-    tft.setRotation(1);
-    tft.setTextSize(2);
-    tftwelcome();
+    screen.begin();
+    screen.setTextColor(BLACK);
+    screen.setRotation(1);
+    screen.setTextSize(2);
     Serial.println("Started!");
 
 }
 
 
 void RCJ25::Screen_Write(float txt) 
-     tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(250, 38);
-    tft.print(txt);
+    screen.setTextSize(2);
+    screen.setTextColor(WHITE);
+    screen.setCursor(250, 38);
+    screen.print(txt);
 
 }
 
 void RCJ25::Screen_WriteYaw() 
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(5, 38);
-    tft.print("Yaw Angle - ");
-    tft.setCursor(250, 38);
+    screen.setTextSize(2);
+    screen.setTextColor(WHITE);
+    screen.setCursor(5, 38);
+    screen.print("Yaw Angle - ");
+    screen.setCursor(250, 38);
     int yaw = getYaw();
-    tft.print(yaw);
+    screen.print(yaw);
 }
 
 void RCJ25::Screen_WritePitch())
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(5, 38);
-    tft.print("Pitch Angle - ");
-    tft.setCursor(250, 38);
+    screen.setTextSize(2);
+    screen.setTextColor(WHITE);
+    screen.setCursor(5, 38);
+    screen.print("Pitch Angle - ");
+    screen.setCursor(250, 38);
     int pitch = getPitch();
-    tft.print(pitch);
+    screen.print(pitch);
 }
 
 void RCJ25::Screen_WriteRoll() 
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(5, 38);
-    tft.print("Roll Angle - ");
-    tft.setCursor(250, 38);
+    screen.setTextSize(2);
+    screen.setTextColor(WHITE);
+    screen.setCursor(5, 38);
+    screen.print("Roll Angle - ");
+    screen.setCursor(250, 38);
     int Roll = getRoll();
-    tft.print(Roll);
+    screen.print(Roll);
 }
 void RCJ25::Screen_WritelineData() 
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(5, 38);
-    tft.print("Line Data - ");
-    tft.setCursor(250, 38);
+    screen.setTextSize(2);
+    screen.setTextColor(WHITE);
+    screen.setCursor(5, 38);
+    screen.print("Line Data - ");
+    screen.setCursor(250, 38);
     int line = GetLineData();
-    tft.print(line);
+    screen.print(line);
 }
 
 
