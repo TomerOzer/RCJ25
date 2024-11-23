@@ -3,6 +3,22 @@
 #include <Wire.h>
 #include <MPU6050_light.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <Adafruit_GFX.h>     
+#include <Adafruit_ILI9341.h> 
+
+#define TFT_CS 10
+#define TFT_RST 8
+#define TFT_DC 9
+#define TFT_MOSI 11  
+#define TFT_CLK 13  
+
+#define WHITE   0x0000
+#define BLACK   0xFFFF
+#define RED     0x07FF
+#define GREEN   0xF81F
+#define BLUE    0xFFE0
+
+Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST);
 
 Adafruit_PWMServoDriver pwmDriver = Adafruit_PWMServoDriver();
 MPU6050 mpu(Wire);
@@ -26,10 +42,65 @@ RCJ25::RCJ25()
 void RCJ25::begin() {
     Serial.begin(115200);
     pwmDriver.begin();
-    pwmDriver.setPWMFreq(1000);  // Set frequency for PCA9685
+    pwmDriver.setPWMFreq(1000); 
     calibrateMPU();              
+    tft.begin();
+    tft.setTextColor(BLACK);
+    tft.setRotation(1);
+    tft.setTextSize(2);
+    tftwelcome();
     Serial.println("Started!");
+
 }
+
+
+void RCJ25::Screen_Write(float txt) 
+     tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(250, 38);
+    tft.print(txt);
+
+}
+
+void RCJ25::Screen_WriteYaw() 
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(5, 38);
+    tft.print("Yaw Angle - ");
+    tft.setCursor(250, 38);
+    int yaw = getYaw();
+    tft.print(yaw);
+}
+
+void RCJ25::Screen_WritePitch())
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(5, 38);
+    tft.print("Pitch Angle - ");
+    tft.setCursor(250, 38);
+    int pitch = getPitch();
+    tft.print(pitch);
+}
+
+void RCJ25::Screen_WriteRoll() 
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(5, 38);
+    tft.print("Roll Angle - ");
+    tft.setCursor(250, 38);
+    int Roll = getRoll();
+    tft.print(Roll);
+}
+void RCJ25::Screen_WritelineData() 
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(5, 38);
+    tft.print("Line Data - ");
+    tft.setCursor(250, 38);
+    int line = GetLineData();
+    tft.print(line);
+}
+
 
 void RCJ25::write(String txt){
   Serial.print("Received character: ");
