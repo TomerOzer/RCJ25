@@ -23,7 +23,12 @@ public:
     void WriteYaw();
     void WritePitch();
     void WriteRoll();
-    
+    void Screen_WriteYaw();
+    void Screen_WriteRoll();
+    void Screen_WritePitch();
+    void Screen_WrietData();
+
+
 private:
     void calibrateMPU();
     int getYaw();
