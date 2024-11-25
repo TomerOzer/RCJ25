@@ -54,5 +54,3 @@ while True:
      cam.DetectBlackLine(80)
 
 
-def testgit():
-    pass
