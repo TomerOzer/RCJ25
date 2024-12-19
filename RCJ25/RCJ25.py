@@ -1,56 +1,103 @@
-import sensor, time
-from pyb import I2C
+from machine import Pin, PWM, I2C
+from time import sleep, ticks_ms
+from mpu6050 import MPU6050
+import struct
 
 class RCJ25:
     def __init__(self):
-        self.i2c = I2C(2, I2C.SLAVE, addr=0x42) # needs to be checked.
-        self.line_data = [0, 0, 0, 0]
-        print("Started!\n")
+        # Initialize I2C for MPU6050 and OpenMV camera
+        self.i2c = I2C(scl=Pin(22), sda=Pin(21))
+        self.mpu = MPU6050(self.i2c)
+        self.camera_address = 0x42  
+        
+        # Initialize motors
+        self.motor1 = self.Motor(15, 2, 4)
+        self.motor2 = self.Motor(5, 18, 19)
+        self.motor3 = self.Motor(21, 22, 23)
+        self.motor4 = self.Motor(25, 26, 27)
+        
+        # PID-related variables
+        self.previous_error = 0
+        self.integral = 0
+        self.previous_time = ticks_ms()
 
-    def write(self, txt):
-        print(str(txt))
+    class Motor:
+        def __init__(self, pinA, pinB, pinE):
+            self.pinA = PWM(Pin(pinA), freq=1000)
+            self.pinB = PWM(Pin(pinB), freq=1000)
+            self.pinE = PWM(Pin(pinE), freq=1000)
 
-    def DisplayScreen(self):
-        sensor.reset()
-        sensor.set_pixformat(sensor.RGB565)
-        sensor.set_framesize(sensor.QVGA)
-        sensor.skip_frames(time=200)
-        print("Display initialized.")
+        def set_speed(self, speed):
+            if speed > 0:  # Forward
+                self.pinA.duty_u16(65535)
+                self.pinB.duty_u16(0)
+            elif speed < 0:  # Backward
+                self.pinA.duty_u16(0)
+                self.pinB.duty_u16(65535)
+            else:  # Stop
+                self.pinA.duty_u16(0)
+                self.pinB.duty_u16(0)
+            self.pinE.duty_u16(abs(speed) * 256)
 
-    def DetectBlackLine(self, max_intensity):
-        img = sensor.snapshot()
-        lines = img.find_lines(threshold=2000, theta_margin=25, rho_margin=25)
+        def stop(self):
+            self.pinA.duty_u16(0)
+            self.pinB.duty_u16(0)
+            self.pinE.duty_u16(0)
 
-        if lines:
-            for line in lines:
-                x1, y1, x2, y2 = line.x1(), line.y1(), line.x2(), line.y2()
-                r1, g1, b1 = img.get_pixel(x1, y1)
-                r2, g2, b2 = img.get_pixel(x2, y2)
-                avg_intensity = (r1 + g1 + b1 + r2 + g2 + b2) // 6
-                if avg_intensity <= max_intensity:
-                    img.draw_line(line.line(), color=(255, 255, 255))
-                    print(f"Black line detected: x1={x1}, y1={y1}, x2={x2}, y2={y2}, Avg Intensity: {avg_intensity}")
-                    self.line_data = [x1, y1, x2, y2]
-                    return self.line_data
+    def pidcalc(self, sp, pv, kp, ki, kd):
+        error = sp - pv
+        current_time = ticks_ms()
+        delta_time = (current_time - self.previous_time) / 1000.0
+        self.integral += error * delta_time
+        derivative = (error - self.previous_error) / delta_time if delta_time > 0 else 0
 
-        print("No lines detected.")
-        self.line_data = [0, 0, 0, 0]
+        output = kp * error + ki * self.integral + kd * derivative
+        self.previous_error = error
+        self.previous_time = current_time
 
-    def SendLine(self, max_intensity=90): # NEEDS TO BE CHECKED
-        print("Sending line data over I2C...")
-        self.DetectBlackLine(max_intensity)
+        return output
+
+    def movein(self, degree, speed):
+        yaw = self.get_yaw()
+        output = self.pidcalc(degree, yaw, kp=1.0, ki=0.01, kd=0.2)
+        front_right_speed = speed + output
+        front_left_speed = speed - output
+        back_right_speed = speed + output
+        back_left_speed = speed - output
+
+        self.motor1.set_speed(front_right_speed)
+        self.motor2.set_speed(front_left_speed)
+        self.motor3.set_speed(back_right_speed)
+        self.motor4.set_speed(back_left_speed)
+
+    def stop_motors(self):
+        self.motor1.stop()
+        self.motor2.stop()
+        self.motor3.stop()
+        self.motor4.stop()
+
+    def get_yaw(self):
+        self.mpu.update()
+        return self.mpu.yaw
+
+    def get_pitch(self):
+        self.mpu.update()
+        return self.mpu.pitch
+
+    def get_roll(self):
+        self.mpu.update()
+        return self.mpu.roll
+
+    def receive_camera_angle(self):
         try:
-            data_to_send = bytearray(self.line_data)
-            self.i2c.send(data_to_send)
-            print(f"Line data sent: {list(data_to_send)}")
-        except Exception:
-            print(f"Error while sending line data: {Exception}")
-        time.sleep(0.1)  #To prevent overloading IIC.
+            self.i2c.writeto(self.camera_address, b'\x01')  # Example command
+            data = self.i2c.readfrom(self.camera_address, 4)
+            angle = struct.unpack('f', data)[0]
+            return angle
+        except OSError:
+            print("Error communicating with camera.")
+            return 0.0
 
-cam = RCJ25()
-
-cam.DisplayScreen()
-while True:
-     cam.DetectBlackLine(80)
-
-
+    def follow_line(self, speed):
+        line_angle = self.receive_camera_angle()
+        self.movein(line_angle, speed)

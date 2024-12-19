@@ -17,10 +17,11 @@
 #define RED     0x07FF
 #define GREEN   0xF81F
 #define BLUE    0xFFE0
+#define CAMADRR 0x1 // needs to be changed
 
 Adafruit_ILI9341 screen(SCREEN_CS, SCREEN_DC, SCREEN_MOSI, SCREEN_CLK, SCREEN_RST);
 
-Adafruit_PWMServoDriver pwmDriver = Adafruit_PWMServoDriver();
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 MPU6050 mpu(Wire);
 
 const int motor1_pins[] = {0, 1, 2}; 
@@ -28,7 +29,7 @@ const int motor2_pins[] = {3, 4, 5};
 const int motor3_pins[] = {6, 7, 8};  
 const int motor4_pins[] = {9, 10, 11}; 
 
-RCJ25::RCJ25()
+RCJ25::RCJ25() 
     : motor1(motor1_pins[0], motor1_pins[1], true, motor1_pins[2]), 
       motor2(motor2_pins[0], motor2_pins[1], true, motor2_pins[2]),
       motor3(motor3_pins[0], motor3_pins[1], true, motor3_pins[2]),
@@ -36,13 +37,16 @@ RCJ25::RCJ25()
       mpu(Wire),
       previousError(0),
       integral(0),
-      previousTime(0),
-{}
+      previousTime(0)
+{
+    // Constructor body
+}
+
 
 void RCJ25::begin() {
     Serial.begin(115200);
-    pwmDriver.begin();
-    pwmDriver.setPWMFreq(1000); 
+    pwm.begin();
+    pwm.setPWMFreq(1000); 
     calibrateMPU();              
     screen.begin();
     screen.setTextColor(BLACK);
@@ -53,7 +57,7 @@ void RCJ25::begin() {
 }
 
 
-void RCJ25::Screen_Write(float txt) 
+void RCJ25::Screen_Write(float txt) {
     screen.setTextSize(2);
     screen.setTextColor(WHITE);
     screen.setCursor(250, 38);
@@ -61,7 +65,7 @@ void RCJ25::Screen_Write(float txt)
 
 }
 
-void RCJ25::Screen_WriteYaw() 
+void RCJ25::Screen_WriteYaw() {
     screen.setTextSize(2);
     screen.setTextColor(WHITE);
     screen.setCursor(5, 38);
@@ -71,7 +75,7 @@ void RCJ25::Screen_WriteYaw()
     screen.print(yaw);
 }
 
-void RCJ25::Screen_WritePitch())
+void RCJ25::Screen_WritePitch() {
     screen.setTextSize(2);
     screen.setTextColor(WHITE);
     screen.setCursor(5, 38);
@@ -81,7 +85,8 @@ void RCJ25::Screen_WritePitch())
     screen.print(pitch);
 }
 
-void RCJ25::Screen_WriteRoll() 
+
+void RCJ25::Screen_WriteRoll() {
     screen.setTextSize(2);
     screen.setTextColor(WHITE);
     screen.setCursor(5, 38);
@@ -90,13 +95,13 @@ void RCJ25::Screen_WriteRoll()
     int Roll = getRoll();
     screen.print(Roll);
 }
-void RCJ25::Screen_WritelineData() 
+void RCJ25::Screen_WritelineData() {
     screen.setTextSize(2);
     screen.setTextColor(WHITE);
     screen.setCursor(5, 38);
     screen.print("Line Data - ");
     screen.setCursor(250, 38);
-    int line = GetLineData();
+    int line = GetLineData(CAMADRR);
     screen.print(line);
 }
 
@@ -187,7 +192,7 @@ int RCJ25::GetLineData(unsigned int addr) {
 
 
 void RCJ25::followline(int speed) {
-    float out = receiveAngleFromOpenMV();
+    float out = GetLineData(CAMADRR);
     movein(out, speed);
 }
 
@@ -226,20 +231,20 @@ RCJ25::Motor::Motor(int _pinA, int _pinB, bool usePCA, int _pinE)
 
 void RCJ25::Motor::setSpeed(int speed) {
       if (speed > 0) { // forward:
-          pwmDriver.setPWM(pinA, 0, 4095);  
-          pwmDriver.setPWM(pinB, 0, 0);
+          pwm.setPWM(pinA, 0, 4095);  
+          pwm.setPWM(pinB, 0, 0);
       } else { // backward:
-          pwmDriver.setPWM(pinA, 0, 0);     
-          pwmDriver.setPWM(pinB, 0, 4095);
+          pwm.setPWM(pinA, 0, 0);     
+          pwm.setPWM(pinB, 0, 4095);
       }
-      pwmDriver.setPWM(pinE, 0, map(abs(speed), 0, 254, 0, 4096));
+      pwm.setPWM(pinE, 0, map(abs(speed), 0, 254, 0, 4096));
  
 }
 
 void RCJ25::Motor::stop() {
-    pwmDriver.setPWM(pinA, 0, 0);
-    pwmDriver.setPWM(pinB, 0, 0);
-    pwmDriver.setPWM(pinE, 0, 0);
+    pwm.setPWM(pinA, 0, 0);
+    pwm.setPWM(pinB, 0, 0);
+    pwm.setPWM(pinE, 0, 0);
 }
 
 // GYRO FUNCTIONS:
@@ -285,4 +290,12 @@ void RCJ25::WriteRoll() {
   Serial.print("| Roll =");
   Serial.print(Roll);
   Serial.println(" |");
+}
+
+void RCJ25::Blink(){
+  pinMode(13, OUTPUT);
+  digitalWrite(13, HIGH);
+  delay(200);
+  digitalWrite(13, LOW);
+  delay(2000);
 }

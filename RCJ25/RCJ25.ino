@@ -8,6 +8,6 @@ void setup() {
 }
 
 void loop() {
-  
+  Robot.Blink();
 
 }

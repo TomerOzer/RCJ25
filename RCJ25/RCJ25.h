@@ -27,6 +27,11 @@ public:
     void Screen_WriteRoll();
     void Screen_WritePitch();
     void Screen_WrietData();
+    void Screen_Write(float txt);
+    void Screen_WritelineData();
+    void Blink();
+
+
 
 
 private:
