@@ -1,103 +1,87 @@
-from machine import Pin, PWM, I2C
-from time import sleep, ticks_ms
-from mpu6050 import MPU6050
-import struct
+from machine import Pin, SoftI2C, I2C
+from time import sleep_ms
+from math import atan2, sqrt
+import time
+from L298N_MINI import motor
+from MPU6050 import MPU6050
 
-class RCJ25:
+
+
+
+
+class RCJ25: 
     def __init__(self):
-        # Initialize I2C for MPU6050 and OpenMV camera
-        self.i2c = I2C(scl=Pin(22), sda=Pin(21))
-        self.mpu = MPU6050(self.i2c)
-        self.camera_address = 0x42  
-        
-        # Initialize motors
-        self.motor1 = self.Motor(15, 2, 4)
-        self.motor2 = self.Motor(5, 18, 19)
-        self.motor3 = self.Motor(21, 22, 23)
-        self.motor4 = self.Motor(25, 26, 27)
-        
-        # PID-related variables
+        self.gyroDefined = 0
         self.previous_error = 0
         self.integral = 0
-        self.previous_time = ticks_ms()
+        self.last_time = time.time() 
+        self.i2c_scl = 22
+        self.i2c_sda = 21
+        self.i2c = I2C(0, scl=Pin(self.i2c_scl), sda=Pin(self.i2c_sda))
+        self.motor1 = motor(32, 33)
+        self.motor2 = motor(25, 26)
+        self.motor3 = motor(27, 14)
+        self.motor4 = motor(12, 13)
+        self.gyro = MPU6050()
 
-    class Motor:
-        def __init__(self, pinA, pinB, pinE):
-            self.pinA = PWM(Pin(pinA), freq=1000)
-            self.pinB = PWM(Pin(pinB), freq=1000)
-            self.pinE = PWM(Pin(pinE), freq=1000)
 
-        def set_speed(self, speed):
-            if speed > 0:  # Forward
-                self.pinA.duty_u16(65535)
-                self.pinB.duty_u16(0)
-            elif speed < 0:  # Backward
-                self.pinA.duty_u16(0)
-                self.pinB.duty_u16(65535)
-            else:  # Stop
-                self.pinA.duty_u16(0)
-                self.pinB.duty_u16(0)
-            self.pinE.duty_u16(abs(speed) * 256)
 
-        def stop(self):
-            self.pinA.duty_u16(0)
-            self.pinB.duty_u16(0)
-            self.pinE.duty_u16(0)
+    def pid_calc(self, current_value, Kp, Ki, Kd):
+        current_time = time.time()
+        dt = current_time - self.last_time
+        self.last_time = current_time  
 
-    def pidcalc(self, sp, pv, kp, ki, kd):
-        error = sp - pv
-        current_time = ticks_ms()
-        delta_time = (current_time - self.previous_time) / 1000.0
-        self.integral += error * delta_time
-        derivative = (error - self.previous_error) / delta_time if delta_time > 0 else 0
+        error = self.setpoint - current_value
 
-        output = kp * error + ki * self.integral + kd * derivative
+        self.integral += error * dt
+
+        derivative = (error - self.previous_error) / dt if dt > 0 else 0
+
+        output = Kp * error + Ki * integral + Kd * derivative
+
         self.previous_error = error
-        self.previous_time = current_time
 
         return output
 
-    def movein(self, degree, speed):
-        yaw = self.get_yaw()
-        output = self.pidcalc(degree, yaw, kp=1.0, ki=0.01, kd=0.2)
-        front_right_speed = speed + output
-        front_left_speed = speed - output
-        back_right_speed = speed + output
-        back_left_speed = speed - output
+#    def DefineGyro(self):
+#        if self.gyroDefined == 0:
+#            self.gyro = MPU6050()
+#            self.gyroDefined = 1
+        
 
-        self.motor1.set_speed(front_right_speed)
-        self.motor2.set_speed(front_left_speed)
-        self.motor3.set_speed(back_right_speed)
-        self.motor4.set_speed(back_left_speed)
+        
+    def read_gyro(self):
+        data = self.gyro.read_gyro_data()
+        return data
 
-    def stop_motors(self):
-        self.motor1.stop()
-        self.motor2.stop()
-        self.motor3.stop()
-        self.motor4.stop()
 
     def get_yaw(self):
-        self.mpu.update()
-        return self.mpu.yaw
+        return int(self.gyro.getYaw())
+
 
     def get_pitch(self):
-        self.mpu.update()
-        return self.mpu.pitch
+        return self.gyro.getPitch()
 
     def get_roll(self):
-        self.mpu.update()
-        return self.mpu.roll
+        return self.gyro.getRoll()
 
-    def receive_camera_angle(self):
-        try:
-            self.i2c.writeto(self.camera_address, b'\x01')  # Example command
-            data = self.i2c.readfrom(self.camera_address, 4)
-            angle = struct.unpack('f', data)[0]
-            return angle
-        except OSError:
-            print("Error communicating with camera.")
-            return 0.0
+    def turnRight(self, speed, setpoint):
+        print("Right")
+        
+    def turnLeft(self, speed, setpoint):
+        print("Left")
+        
+    def turn(self, speed, setpoint):
+        self.turnRight(speed, setpoint) if setpoint > 0 else self.turnLeft(speed, setpoint)
 
-    def follow_line(self, speed):
-        line_angle = self.receive_camera_angle()
-        self.movein(line_angle, speed)
+
+    def run(self):
+        print(self.get_yaw())
+        
+
+
+
+
+
+
+print("Hello World!")
