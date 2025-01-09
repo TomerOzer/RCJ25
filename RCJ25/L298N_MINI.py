@@ -2,9 +2,8 @@ from machine import Pin, SoftI2C, I2C
 from time import sleep_ms
 from math import atan2, sqrt
 import time
-from ssd1306 import SSD1306_I2C
 
-class L298N_MINI:
+class motor:
     def __init__(self, Ain, Bin):
         self.Apin = Pin(Ain, Pin.OUT)
         self.Bpin = Pin(Bin, Pin.OUT)
@@ -17,6 +16,6 @@ class L298N_MINI:
             self.Bin.value(0)  
             self.Apin.duty_u16(abs(int(speed * 65535 / 100)))
 
-    def stop(self):
+    def stop(self):a
         self.Apin.value(0)
         self.Bpin.value(0)

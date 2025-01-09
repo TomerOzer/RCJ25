@@ -1,12 +1,15 @@
 from machine import Pin, SoftI2C, I2C
-from time import sleep_ms
+from time import sleep_ms, ticks_ms, ticks_diff
 from math import atan2, sqrt
 import time
-from ssd1306 import SSD1306_I2C
 
+def signedIntFromBytes(x, endian="big"):
+    y = int.from_bytes(x, endian)
+    if y >= 0x8000:
+        return -((65535 - y) + 1)
+    return y
 
-
-class mpu6050:
+class MPU6050:
     def __init__(self, addr=0x68):
         # Initialize VARs:
 
@@ -60,6 +63,10 @@ class mpu6050:
             self._GYR_RNG_1000DEG: self._GYR_SCLR_1000DEG,
             self._GYR_RNG_2000DEG: self._GYR_SCLR_2000DEG
         }.get(self._gyro_range, self._GYR_SCLR_250DEG)
+        
+        self.gyro_scale = self._GYR_SCLR_250DEG
+        self.total_yaw = 0.0  # Accumulated yaw angle
+        self.last_time = ticks_ms()  # Timestamp for integration
 
     def readData(self, register):
         failCount = 0
@@ -89,16 +96,41 @@ class mpu6050:
         return {"x": x, "y": y, "z": z}
 
     def read_gyro_data(self):
-        gyro_data = self.readData(self._GYRO_XOUT0)
-        x = gyro_data["x"] / self.gyro_scale
-        y = gyro_data["y"] / self.gyro_scale
-        z = gyro_data["z"] / self.gyro_scale
+        fail_count = 0
+        while fail_count < 3:  
+            try:
+                sleep_ms(10)
+                data = self.i2c.readfrom_mem(self.addr, self._GYRO_XOUT0, 6)
+                break
+            except:
+                fail_count += 1
+                if fail_count >= 3:
+                    return {"x": float("NaN"), "y": float("NaN"), "z": float("NaN")}
+        x = signedIntFromBytes(data[0:2]) / self.gyro_scale
+        y = signedIntFromBytes(data[2:4]) / self.gyro_scale
+        z = signedIntFromBytes(data[4:6]) / self.gyro_scale
         return {"x": x, "y": y, "z": z}
 
     def getYaw(self):
+        current_time = ticks_ms()
+        dt = ticks_diff(current_time, self.last_time) / 1000.0
+        self.last_time = current_time
+
         gyro = self.read_gyro_data()
-        return gyro["z"]
-        # return 10
+        delta_yaw = (gyro["z"] * dt) 
+        self.total_yaw += delta_yaw
+        if self.total_yaw > 360:
+            self.total_yaw -= 360
+        elif self.total_yaw < -360:
+            self.total_yaw += 360
+        
+
+            
+        return int(self.total_yaw)
+
+    def resetYaw(self):
+        self.total_yaw = 0.0
+
 
     def getRoll(self):
         accel = self.read_accel_data()
@@ -129,4 +161,8 @@ class mpu6050:
             self._GYR_RNG_1000DEG: 1000,
             self._GYR_RNG_2000DEG: 2000
         }.get(raw_data[0], -1)
+
+if __name__ == "__main__":
+    mpu = MPU6050()  
+
 
