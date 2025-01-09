@@ -38,14 +38,13 @@ class RCJ25:
 
     def send_line_data(self):
         data = ','.join(map(str, self.line_data))
-
         if self.prev_data == data:
-                return
+            return
         else:
-            self.uart.write(f"Line Data: {data}\n")
+            self.uart.write(f"{data}\n")  # Send only the data without "Line Data:"
             print(f"Sent line data: {data}")
-            self.prev_data = data  # Update prev_data to the current data
-            sleep_ms(200)
+            self.prev_data = data
+
 
 
 
