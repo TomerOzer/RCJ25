@@ -1,21 +1,31 @@
-from machine import Pin, SoftI2C, I2C
-from time import sleep_ms
-from math import atan2, sqrt
-import time
+from machine import Pin, PWM
 
 class motor:
     def __init__(self, Ain, Bin):
-        self.Apin = Pin(Ain, Pin.OUT)
-        self.Bpin = Pin(Bin, Pin.OUT)
+        self.Apin = PWM(Pin(Ain))
+        self.Bpin = PWM(Pin(Bin))
+        self.Apin.init(freq=1000, duty_u16=0)
+        self.Bpin.init(freq=1000, duty_u16=0)
 
     def set_speed(self, speed):
-        if speed < 0:
-            self.Apin.value(0) 
-            self.Bpin.duty_u16(abs(int(speed * 65535 / 100)))
-        else:
-            self.Bin.value(0)  
-            self.Apin.duty_u16(abs(int(speed * 65535 / 100)))
+        speed = max(-100, min(100, speed))  
+        duty = int(abs(speed) * 65535 / 100)  
 
-    def stop(self):a
-        self.Apin.value(0)
-        self.Bpin.value(0)
+        if speed < 0:
+            self.Apin.duty_u16(0)
+            self.Bpin.duty_u16(duty)
+        else:
+            self.Bpin.duty_u16(0)
+            self.Apin.duty_u16(duty)
+
+        print(f"Motor running: Pin {self.Apin} Duty {self.Apin.duty_u16()}")
+        print(f"Motor running: Pin {self.Bpin} Duty {self.Bpin.duty_u16()}")
+
+    def stop(self):
+        self.Apin.duty_u16(0)
+        self.Bpin.duty_u16(0)
+
+    def deinit(self):
+        self.Apin.deinit()
+        self.Bpin.deinit()
+
